@@ -61,15 +61,15 @@ prison population?}
 \SweaveOpts{concordance=TRUE,prefix.string=Pris}
 \setkeys{Gin}{width=1.1\marginparwidth} %% Sweave
 
-\frontmatter
-
-\newpage\thispagestyle{empty}
-\openepigraph{
-It's tough to make predictions\newline especially about the future.
-}{Yogi Berra
-}
-
-\maketitle
+% \frontmatter
+% 
+% \newpage\thispagestyle{empty}
+% \openepigraph{
+% It's tough to make predictions\newline especially about the future.
+% }{Yogi Berra
+% }
+% 
+% \maketitle
 
 \mainmatter
 
@@ -78,6 +78,7 @@ library(tidyverse)
 library(xtable)
 library(lubridate)
 library(gridExtra)
+library(forecast)
 @
 
 % Setting the ggplot theme:
@@ -109,13 +110,102 @@ ggplot(data=prison.pop) +
   JT.theme
 @
 
-\begin{marginfigure}[0cm]
+\begin{figure}
 \includegraphics[width=1\textwidth]{Pris-pop}
 \caption{}
 \label{fig:pop}
 \setfloatalignment{b}% forces caption to be bottom-aligned
+\end{figure}
+
+\chapter{Forecasts}
+\section{2017-12-16}
+
+\newthought{First a prediction for December 31th 2017}.
+
+<<echo=FALSE>>=
+# Reading the data
+reading.date <- c("2017-12-16")
+prison.pop<- read.csv("Data/BOP_pastPopulationTotals.csv", 
+                      sep=",",
+                      dec=",",
+                      header=TRUE,
+                      col.names=c("Datum","Number","Growth"))
+prison.pop %>% select(Datum, Number) -> prison.pop
+prison.pop$Number <- prison.pop$Number*1000
+prison.pop$Datum <- paste("31-12-",as.character(prison.pop$Datum))
+fit.prison.pop <- ets(prison.pop$Number)
+# Forecast for the next year
+fc.prison.pop.17 <- forecast(fit.prison.pop,h=1)
+@
+
+Calculating probabilities
+
+<<echo=FALSE>>=
+fc <- as.data.frame(fc.prison.pop.17)
+sigma <- (fc$"Hi 95"[nrow(fc)] - fc$"Lo 95"[nrow(fc)])/4
+mu <- fc$`Point Forecast`[nrow(fc)]
+range_limits <- c(180000, 185000, 190000, 195000)
+for (i in c(1:5)) {
+  ifelse(i==1 , print(paste0("less than or equal to ",range_limits[i], " = ", 100*round(pnorm(range_limits[i],mu,sigma),3))) ,
+         ifelse(i==5 , print(paste0("more than ",range_limits[i-1]," = ", 100*round(1 - pnorm(range_limits[i-1],mu,sigma),3))) ,
+         print(paste0("more than ", range_limits[i-1] , " and less than or equal to ",range_limits[i], " = ", 100*round(pnorm(range_limits[i],mu,sigma) - pnorm(range_limits[i-1],mu,sigma),3)))))
+}
+@
+
+The prediction for the end of 2017 is \Sexpr{round(mu,0)}. However the real number at the moment (2017-12-14) is 184.402. So it could top 185.000 at the end of 2017. The policy of Jef Sessions to put more people in prison\sidenote{Attorney General Jeff Sessions wants to reverse the policies of the Obama administration, by prosecuting more cases involving guns and drugs, and seeking more mandatory minimum sentences. (The Washington Post, May 16 2017)} seems to have changed the trend. The difference between the prediction based on the years up to 2016 and the reality in 2017 is about 5.000 prisoners extra. We can see in Figure~\ref{fig:pop2017} that the downward trend has declined. 
+
+\newthought{For the prediction for March 31th 2018} I will already include 185.000 as a provisional value for 2017.
+
+<<label=pop2017,fig=TRUE,include=FALSE, echo=FALSE>>=
+# Add provisional value for 2017
+prison.pop <- rbind(prison.pop,c("31-12- 2017",185000))
+prison.pop$Number <- as.numeric(prison.pop$Number)
+prison.pop$index <- as.numeric(rownames(prison.pop))
+ggplot(data=prison.pop, aes(x=index)) +
+  geom_line(aes(y = Number)) +
+  labs(title="US Federal Prison Population 1980-2017", y="Total Population (in thousands)") +
+  JT.theme
+@
+
+\begin{marginfigure}
+\includegraphics[width=1\textwidth]{Pris-pop2017}
+\caption{}
+\label{fig:pop2017}
+\setfloatalignment{b}% forces caption to be bottom-aligned
 \end{marginfigure}
 
-\section{2017-12-14}
+<<echo=FALSE>>=
+fit.prison.pop <- ets(prison.pop$Number)
+# Forecast for 1 year
+fc.prison.pop.18 <- forecast(fit.prison.pop, h=1)
+@
+
+<<echo=FALSE>>=
+fc <- as.data.frame(fc.prison.pop.18)
+# Prediction for March 31th 2018 by linear interpolation
+# Linear interpolation for the estimated sigma (only 3 months = 1 year/4)
+sigma <- (fc$"Hi 95"[nrow(fc)] - fc$"Lo 95"[nrow(fc)])/16
+# Linear interpolation for the estimated mean
+mu <- prison.pop$Number[nrow(prison.pop)] + 
+  (fc$`Point Forecast`[nrow(fc)] - prison.pop$Number[nrow(prison.pop)])/4
+@
+
+The prediction for March 31th 2018 is \Sexpr{round(mu,0)} which means the decline continues. However, the ''Sessions"-effect will continue so that the decline is not so great. In 2017 this effect increased the population with 5.000 prisoners compared to the prognosis. That is 1.250 extra for a period of 3 months (up to March 31th 2018). So I add this extra effect to the calculated mean.
+
+Calculating probabilities
+
+<<echo=FALSE>>=
+# Add extra 1250 prisoners
+mu <- mu + 1250
+print(mu)
+print(sigma)
+for (i in c(1:5)) {
+  ifelse(i==1 , print(paste0("less than or equal to ",range_limits[i], " = ", 100*round(pnorm(range_limits[i],mu,sigma),3))) ,
+         ifelse(i==5 , print(paste0("more than ",range_limits[i-1]," = ", 100*round(1 - pnorm(range_limits[i-1],mu,sigma),3))) ,
+         print(paste0("more than ", range_limits[i-1] , " and less than or equal to ",range_limits[i], " = ", 100*round(pnorm(range_limits[i],mu,sigma) - pnorm(range_limits[i-1],mu,sigma),3)))))
+}
+@
+
+\textbf{Forecast 1: 0\%, 95\%, 5\%, 0\%, 0\% }.
 
 \end{document}
