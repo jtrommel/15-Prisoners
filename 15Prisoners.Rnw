@@ -51,27 +51,17 @@
 \usepackage{makeidx}
 \makeindex
 
-\title{On 30 March 2018,\\
-what will be\\
-the U.S. federal\\
-prison population?}
 \author{Jan Trommelmans}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE,prefix.string=Pris}
 \setkeys{Gin}{width=1.1\marginparwidth} %% Sweave
 
-% \frontmatter
-% 
-% \newpage\thispagestyle{empty}
-% \openepigraph{
-% It's tough to make predictions\newline especially about the future.
-% }{Yogi Berra
-% }
-% 
-% \maketitle
 
 \mainmatter
+
+\chapter{On 30 March 2018, what will be the U.S. federal prison population?}
+\newthought{Jan Trommelmans}
 
 <<echo=FALSE>>=
 library(tidyverse)
@@ -99,7 +89,7 @@ JT.theme <- theme(panel.border = element_rect(fill = NA, colour = "gray10"),
                   legend.key = element_rect(fill = "white"))
 @
 
-\chapter{Data}
+\section{Data}
 
 <<label=pop,fig=TRUE,include=FALSE, echo=FALSE>>=
 prison.pop<- read.csv("Data/BOP_pastPopulationTotals.csv", sep=",",dec=",",header=TRUE)
@@ -111,7 +101,7 @@ ggplot(data=prison.pop) +
 @
 
 \begin{figure}
-\includegraphics[width=1\textwidth]{Pris-pop}
+\includegraphics[width=0.85\textwidth]{Pris-pop}
 \caption{}
 \label{fig:pop}
 \setfloatalignment{b}% forces caption to be bottom-aligned
@@ -119,6 +109,7 @@ ggplot(data=prison.pop) +
 
 \chapter{Forecasts}
 \section{2017-12-16}
+\label{sec:2017-12-16}
 
 \newthought{First a prediction for December 31th 2017}.
 
@@ -207,5 +198,60 @@ for (i in c(1:5)) {
 @
 
 \textbf{Forecast 1: 0\%, 95\%, 5\%, 0\%, 0\% }.
+
+\section{2017-12-21}
+
+Winter has come.
+
+Today there was a new report on the prison population. It stands at 184.244, which is 158 \emph{lower} than a week ago. So in section \ref{sec:2017-12-16} I was wrong to assume the total would go up! Silly mistake: it is not because time goes forward that the prison population will grow! A decline of 158 in one week leads to a decline of 13*158=2054 in the thirteen weeks from Jan 1st 2018 till March 31th 2018. So we would end up with 182.486 prisoners.
+
+So let's redo the probabilities with following changes:
+\begin{itemize}
+  \item set the number for December 31th 2017 to 184.000 instead of 185.000
+  \item recalculate and compare with the 182.486 I got from the back-of-the-envelope calculation above.
+\end{itemize}
+
+<<echo=FALSE>>=
+# Change provisional value for 2017
+prison.pop$Number[nrow(prison.pop)] <- 184000
+prison.pop$Number <- as.numeric(prison.pop$Number)
+prison.pop$index <- as.numeric(rownames(prison.pop))
+fit.prison.pop <- ets(prison.pop$Number)
+# Forecast for 1 year
+fc.prison.pop.18 <- forecast(fit.prison.pop, h=1)
+fc <- as.data.frame(fc.prison.pop.18)
+# Prediction for March 31th 2018 by linear interpolation
+# Linear interpolation for the estimated sigma (only 3 months = 1 year/4)
+sigma.b <- (fc$"Hi 95"[nrow(fc)] - fc$"Lo 95"[nrow(fc)])/16
+# Linear interpolation for the estimated mean
+mu.b <- prison.pop$Number[nrow(prison.pop)] + 
+  (fc$`Point Forecast`[nrow(fc)] - prison.pop$Number[nrow(prison.pop)])/4
+@
+
+The prediction for March 31th 2018 is \Sexpr{round(mu.b,0)} which is about a thousand lower than the number I got with the back-of-the-envelope calculation.
+
+<<echo=FALSE>>=
+# Add 1250 prisoners for the Sessions effect 
+mu.b <- mu.b +1250
+print(mu.b)
+print(sigma.b)
+for (i in c(1:5)) {
+  ifelse(i==1 , print(paste0("less than or equal to ",range_limits[i], " = ", 100*round(pnorm(range_limits[i],mu.b,sigma.b),3))) ,
+         ifelse(i==5 , print(paste0("more than ",range_limits[i-1]," = ", 100*round(1 - pnorm(range_limits[i-1],mu.b,sigma.b),3))) ,
+         print(paste0("more than ", range_limits[i-1] , " and less than or equal to ",range_limits[i], " = ", 100*round(pnorm(range_limits[i],mu.b,sigma.b) - pnorm(range_limits[i-1],mu.b,sigma.b),3)))))
+}
+@
+
+I think the evolution of these data is very steady, so that the interval of 5000 between 180.000 and 185.000 leaves enough room to buffer sudden changes in the next months.
+
+\textbf{Forecast 2: 1\%, 98\%, 1\%, 0\%, 0\% }.
+
+\section{2017-12-28}
+
+Newest data: on December 28th 2017 there are 184.000 federal inmates (which is exactly the number I used as an estimate for December 31th in my last forecast). That is 244 \emph{lower} than one week ago. The last time the drop was 158 per week. Let's take the average of these two: -201 per week. If that lasts for another 13 weeks the end result will be 181.387. The drop in numbers doesn't seem to slow down. Or is there a Christmas effect? 
+
+\newthought{It would take} an extra of 6.9 weeks (on top of the 13 weeks until March 31th) at the same decline to get below 180.000. A small change to the forecast: no chance of going above 185.000 and I shift the 1\% I gave that region to the possibility of dropping below 180.000.
+
+\textbf{Forecast3: 2\%, 98\%, 0\%, 0\%, 0\% }.
 
 \end{document}
