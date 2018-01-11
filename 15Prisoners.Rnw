@@ -254,4 +254,68 @@ Newest data: on December 28th 2017 there are 184.000 federal inmates (which is e
 
 \textbf{Forecast3: 2\%, 98\%, 0\%, 0\%, 0\% }.
 
+\section{2017-01-05}
+
+Newest data: on Januari 4th 2018 there are 183.493 federal inmates. That is 507 \emph{lower} than one week ago. The average drop per week over the last three weeks is now 303/week If that lasts for another 13 weeks the end result will be 179.554. Let's keep an eye on the evolution of those numbers to see if this is an end-of-year situation or not. At present I will just use a simple linear regression model.
+
+\newthought{I change my forecast} giving an increased probability that the final number will be below 180.000.
+
+\textbf{Forecast4: 10\%, 90\%, 0\%, 0\%, 0\% }.
+
+\section{2017-01-12}
+
+Newest data: 183.852, up 359. Let's make a graph of the last data from 2017-12-14 up to today (Figure~\ref{fig:recentpop}). Sadly I do not have detailed information from previous years that could tell me if there is always an end-of-year reduction in the numbers followed by a jump.
+
+<<label=recentpop,fig=TRUE,include=FALSE, echo=FALSE>>=
+pop <- data.frame(idx=c(1:16), datum=seq(ymd("2017-12-14"), length=16, by=as.difftime(weeks(1))), number=c(c(184402, 184244, 184000, 183493, 183852),rep(NA,11)))
+ggplot(data=pop, aes(x=datum)) +
+  geom_ribbon(aes(ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
+  geom_line(aes(y = number)) +
+  labs(title="US Federal Prison Population 2017-12-14 to 2018-01-12", y="Total Population") +
+  coord_cartesian(ylim = c(179500, 185000)) +
+  geom_hline(yintercept = 180000, color="blue") +
+  geom_hline(yintercept = 185000, color="blue") +
+  JT.theme
+@
+
+\begin{marginfigure}[-6cm]
+\includegraphics[width=1\textwidth]{Pris-recentpop}
+\caption{}
+\label{fig:recentpop}
+\setfloatalignment{b}% forces caption to be bottom-aligned
+\end{marginfigure}
+
+<<echo=FALSE>>=
+mod1 <- lm(number ~ idx, pop)
+new <- data.frame(idx=c(6:16))
+pred <- predict(mod1, newdata=new, interval='confidence')
+pop$fit <- c(pop$number[1:5], pred[,1])
+pop$lower <- c(pop$number[1:5], pred[,2])
+pop$upper <- c(pop$number[1:5], pred[,3])
+@
+
+<<label=recentpred,fig=TRUE,include=FALSE, echo=FALSE>>=
+ggplot(data=pop, aes(x=datum)) +
+  geom_ribbon(aes(ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
+  geom_line(aes(y = fit)) +
+  geom_line(aes(y = lower), color="grey70") +
+  geom_line(aes(y = upper), color="grey70") +
+  labs(title="US Federal Prison Population 2017-12-14 to 2018-01-12", y="Total Population") +
+  geom_hline(yintercept = 180000, color="blue") +
+  geom_hline(yintercept = 185000, color="blue") +
+  coord_cartesian(ylim = c(175000, 185000)) +
+  JT.theme
+@
+
+For the moment my best guess is a simple linear model (Figure~\ref{fig:recentpred}). The fitted model ends around 181.500, the upper value is 184.600 and the lower value is 178.750. I do not change my forecast.
+
+\textbf{Forecast5=Forecast4: 10\%, 90\%, 0\%, 0\%, 0\% }.
+
+\begin{marginfigure}[0cm]
+\includegraphics[width=1\textwidth]{Pris-recentpred}
+\caption{}
+\label{fig:recentpred}
+\setfloatalignment{b}% forces caption to be bottom-aligned
+\end{marginfigure}
+
 \end{document}
