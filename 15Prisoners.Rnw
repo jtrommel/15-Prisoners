@@ -89,6 +89,34 @@ JT.theme <- theme(panel.border = element_rect(fill = NA, colour = "gray10"),
                   legend.key = element_rect(fill = "white"))
 @
 
+% Declaring functions:
+<<echo=FALSE>>=
+JT.des <- function(serie.des, alpha=0.1, beta=0.1) {
+  serie.des$level <- NA
+  serie.des$slope <- NA
+  serie.des$yhat <- NA
+  serie.des$level[1] <- serie.des$y[1]
+  serie.des$slope[1] <- 0
+  serie.des$yhat[1] <- serie.des$y[1]
+  for (i in (2:nrow(serie.des))) {
+    if (i==2) {
+      new.level <- serie.des$y[i]
+      new.slope <- serie.des$y[i]-serie.des$y[i-1]
+      yvalue <- serie.des$y[i]
+    } else {
+      yvalue <- serie.des$y[i]
+      }
+  last.level <- serie.des$level[i-1]
+  last.slope <- serie.des$slope[i-1]
+  new.level <- alpha*yvalue + (1 - alpha)*(last.level + last.slope)
+  new.slope <- beta*(new.level - last.level) + (1 - beta)*last.slope
+  serie.des$yhat[i] <- new.level + new.slope
+  serie.des$level[i] <- new.level
+  serie.des$slope[i] <- new.slope
+  }
+  return(serie.des)
+}
+@
 \section{Data}
 
 <<label=pop,fig=TRUE,include=FALSE, echo=FALSE>>=
@@ -292,14 +320,16 @@ pred <- predict(mod1, newdata=new, interval='confidence')
 pop$fit <- c(pop$number[1:5], pred[,1])
 pop$lower <- c(pop$number[1:5], pred[,2])
 pop$upper <- c(pop$number[1:5], pred[,3])
+situation <- data.frame(datum=seq(ymd("2017-12-14"), length=5, by=as.difftime(weeks(1))), geg= pop$fit[1:5])
 @
 
 <<label=recentpred,fig=TRUE,include=FALSE, echo=FALSE>>=
-ggplot(data=pop, aes(x=datum)) +
-  geom_ribbon(aes(ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
-  geom_line(aes(y = fit)) +
-  geom_line(aes(y = lower), color="grey70") +
-  geom_line(aes(y = upper), color="grey70") +
+ggplot() +
+  geom_ribbon(data=pop, aes(x=datum, ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
+  geom_line(data=pop, aes(x=datum, y = fit), linetype="dashed") +
+  geom_line(data=pop, aes(x=datum, y = lower), color="grey70") +
+  geom_line(data=pop, aes(x=datum, y = upper), color="grey70") +
+  geom_line(data=situation, aes(x=datum, y= geg), color="green", size=2) +
   labs(title="US Federal Prison Population 2017-12-14 to 2018-01-12", y="Total Population") +
   geom_hline(yintercept = 180000, color="blue") +
   geom_hline(yintercept = 185000, color="blue") +
@@ -317,5 +347,86 @@ For the moment my best guess is a simple linear model (Figure~\ref{fig:recentpre
 \label{fig:recentpred}
 \setfloatalignment{b}% forces caption to be bottom-aligned
 \end{marginfigure}
+
+<<echo=FALSE>>=
+mu <- pop$fit[16]
+sigma <- (pop$upper[16] - pop$lower[16])/4
+prob1 <- pnorm(180000, mu, sigma)
+prob2 <- pnorm(185000, mu, sigma) - pnorm(180000, mu, sigma)
+prob3 <- 1 - pnorm(185000, mu, sigma)
+@
+\newpage
+\section{2017-01-18}
+
+Newest data: 183.704, down 148. Update of the graph of data from 2017-12-14 up to today (Figure~\ref{fig:recentpopb}).
+
+<<label=recentpopb,fig=TRUE,include=FALSE, echo=FALSE>>=
+pop <- data.frame(idx=c(1:16), datum=seq(ymd("2017-12-14"), length=16, by=as.difftime(weeks(1))), number=c(c(184402, 184244, 184000, 183493, 183852, 183704),rep(NA,10)))
+ggplot(data=pop, aes(x=datum)) +
+  geom_ribbon(aes(ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
+  geom_line(aes(y = number)) +
+  labs(title="US Federal Prison Population 2017-12-14 to 2018-01-18", y="Total Population") +
+  coord_cartesian(ylim = c(179500, 185000)) +
+  geom_hline(yintercept = 180000, color="blue") +
+  geom_hline(yintercept = 185000, color="blue") +
+  JT.theme
+@
+
+\begin{marginfigure}[0cm]
+\includegraphics[width=1\textwidth]{Pris-recentpopb}
+\caption{}
+\label{fig:recentpopb}
+\setfloatalignment{b}% forces caption to be bottom-aligned
+\end{marginfigure}
+
+<<echo=FALSE>>=
+mod1 <- lm(number ~ idx, pop)
+new <- data.frame(idx=c(7:16))
+pred <- predict(mod1, newdata=new, interval='confidence')
+pop$fit <- c(pop$number[1:6], pred[,1])
+pop$lower <- c(pop$number[1:6], pred[,2])
+pop$upper <- c(pop$number[1:6], pred[,3])
+situation <- data.frame(datum=seq(ymd("2017-12-14"), length=6, by=as.difftime(weeks(1))), geg= pop$fit[1:6])
+@
+
+<<label=recentpredb,fig=TRUE,include=FALSE, echo=FALSE>>=
+ggplot() +
+  geom_ribbon(data=pop, aes(x=datum, ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
+  geom_line(data=pop, aes(x=datum, y = fit), linetype="dashed") +
+  geom_line(data=pop, aes(x=datum, y = lower), color="grey70") +
+  geom_line(data=pop, aes(x=datum, y = upper), color="grey70") +
+  geom_line(data=situation, aes(x=datum, y= geg), color="green", size=2) +
+  labs(title="US Federal Prison Population 2017-12-14 to 2018-01-18", y="Total Population") +
+  geom_hline(yintercept = 180000, color="blue") +
+  geom_hline(yintercept = 185000, color="blue") +
+  coord_cartesian(ylim = c(175000, 185000)) +
+  JT.theme
+@
+
+I stick to a simple linear model (Figure~\ref{fig:recentpredb}).
+
+\begin{marginfigure}[0cm]
+\includegraphics[width=1\textwidth]{Pris-recentpredb}
+\caption{}
+\label{fig:recentpredb}
+\setfloatalignment{b}% forces caption to be bottom-aligned
+\end{marginfigure}
+
+<<echo=FALSE>>=
+mu <- pop$fit[16]
+sigma <- (pop$upper[16] - pop$lower[16])/4
+prob1 <- pnorm(180000, mu, sigma)
+prob2 <- pnorm(185000, mu, sigma) - pnorm(180000, mu, sigma)
+prob3 <- 1 - pnorm(185000, mu, sigma)
+@
+
+<<>>=
+print(paste("P[X<180.000]=", round(100*prob1,1), "%"))
+print(paste("P[180.000<X<185.000=]", round(100*prob2,1), "%"))
+print(paste("P[185.000<X<190.000=]", round(100*prob3,1), "%"))
+@
+
+
+\textbf{Forecast6: 1\%, 99\%, 0\%, 0\%, 0\% }.
 
 \end{document}
