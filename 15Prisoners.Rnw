@@ -429,4 +429,77 @@ print(paste("P[185.000<X<190.000=]", round(100*prob3,1), "%"))
 
 \textbf{Forecast6: 1\%, 99\%, 0\%, 0\%, 0\% }.
 
+\section{2017-01-28}
+
+Newest data: 183.465, down 239. Update of the graph of data from 2017-12-14 up to today (Figure~\ref{fig:recentpopc}).
+
+<<label=recentpopc,fig=TRUE,include=FALSE, echo=FALSE>>=
+pop <- data.frame(idx=c(1:16), datum=seq(ymd("2017-12-14"), length=16, by=as.difftime(weeks(1))), number=c(c(184402, 184244, 184000, 183493, 183852, 183704, 183465),rep(NA,9)))
+ggplot(data=pop, aes(x=datum)) +
+  geom_ribbon(aes(ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
+  geom_line(aes(y = number)) +
+  labs(title="US Federal Prison Population 2017-12-14 to 2018-01-26", y="Total Population") +
+  coord_cartesian(ylim = c(179500, 185000)) +
+  geom_hline(yintercept = 180000, color="blue") +
+  geom_hline(yintercept = 185000, color="blue") +
+  JT.theme
+@
+
+\begin{marginfigure}[0cm]
+\includegraphics[width=1\textwidth]{Pris-recentpopc}
+\caption{}
+\label{fig:recentpopc}
+\setfloatalignment{b}% forces caption to be bottom-aligned
+\end{marginfigure}
+
+<<echo=FALSE>>=
+mod1 <- lm(number ~ idx, pop)
+new <- data.frame(idx=c(8:16))
+pred <- predict(mod1, newdata=new, interval='confidence')
+pop$fit <- c(pop$number[1:7], pred[,1])
+pop$lower <- c(pop$number[1:7], pred[,2])
+pop$upper <- c(pop$number[1:7], pred[,3])
+situation <- data.frame(datum=seq(ymd("2017-12-14"), length=7, by=as.difftime(weeks(1))), geg= pop$fit[1:7])
+@
+
+<<label=recentpredc,fig=TRUE,include=FALSE, echo=FALSE>>=
+ggplot() +
+  geom_ribbon(data=pop, aes(x=datum, ymin=180000, ymax=185000), fill="lightskyblue1", alpha=0.5) +
+  geom_line(data=pop, aes(x=datum, y = fit), linetype="dashed") +
+  geom_line(data=pop, aes(x=datum, y = lower), color="grey70") +
+  geom_line(data=pop, aes(x=datum, y = upper), color="grey70") +
+  geom_line(data=situation, aes(x=datum, y= geg), color="green", size=2) +
+  labs(title="US Federal Prison Population 2017-12-14 to 2018-01-26", y="Total Population") +
+  geom_hline(yintercept = 180000, color="blue") +
+  geom_hline(yintercept = 185000, color="blue") +
+  coord_cartesian(ylim = c(175000, 185000)) +
+  JT.theme
+@
+
+I stick to a simple linear model (Figure~\ref{fig:recentpredc}).
+
+\begin{marginfigure}[0cm]
+\includegraphics[width=1\textwidth]{Pris-recentpredc}
+\caption{}
+\label{fig:recentpredc}
+\setfloatalignment{b}% forces caption to be bottom-aligned
+\end{marginfigure}
+
+<<echo=FALSE>>=
+mu <- pop$fit[16]
+sigma <- (pop$upper[16] - pop$lower[16])/4
+prob1 <- pnorm(180000, mu, sigma)
+prob2 <- pnorm(185000, mu, sigma) - pnorm(180000, mu, sigma)
+prob3 <- 1 - pnorm(185000, mu, sigma)
+@
+
+<<>>=
+print(paste("P[X<180.000]=", round(100*prob1,1), "%"))
+print(paste("P[180.000<X<185.000=]", round(100*prob2,1), "%"))
+print(paste("P[185.000<X<190.000=]", round(100*prob3,1), "%"))
+@
+
+
+\textbf{Forecast7=Forecast6: 1\%, 99\%, 0\%, 0\%, 0\% }.
+
 \end{document}
